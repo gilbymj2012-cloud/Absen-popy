@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lanks Absen</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f5f0ff;color:#28134b}
+header{background:linear-gradient(135deg,#581c87,#9333ea);color:white;padding:25px 15px;text-align:center;border-radius:0 0 25px 25px}
+header h1{margin:0;font-size:27px}
+.container{max-width:600px;margin:20px auto;padding:0 14px}
+.card{background:white;padding:20px;border-radius:18px;margin-bottom:18px;box-shadow:0 5px 18px #0000000d}
+h2{margin-top:0;color:#6b21a8}
+label{display:block;margin-top:14px;margin-bottom:6px;font-weight:bold}
+input,select{width:100%;padding:12px;border:1px solid #ddd0f5;border-radius:10px;font-size:15px;background:white}
+button{border:0;padding:12px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer}
+.primary{background:#7e22ce;color:white;width:100%;margin-top:17px}
+.secondary{background:#ede9fe;color:#6b21a8;width:100%;margin-top:10px}
+.danger{background:#fee2e2;color:#991b1b;width:100%;margin-top:10px}
+.nav{display:flex;gap:8px;margin-bottom:15px}
+.nav button{flex:1}
+.hidden{display:none}
+#preview{width:100%;max-height:300px;object-fit:contain;margin-top:12px;border-radius:12px}
+.record{padding:13px;border:1px solid #e9d5ff;border-radius:12px;margin-top:12px;overflow-wrap:anywhere}
+.record img{width:100%;max-height:250px;object-fit:contain;margin-top:10px;border-radius:10px;background:#f5f0ff}
+.small{font-size:12px;color:#6b6478;line-height:1.5}
+footer{text-align:center;padding:20px;color:#6b6478;font-size:12px}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>💜 Lanks Absen</h1>
+<p>Sistem Absensi Foto</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+<div class="nav">
+<button class="primary" onclick="showPage('user')">Absensi</button>
+<button class="secondary" onclick="showPage('admin')">Dashboard</button>
+</div>
+<p class="small">Versi demo: data tersimpan di browser perangkat ini.</p>
+</div>
+
+<section id="userPage" class="card">
+<h2>📸 Form Absensi</h2>
+
+<form id="attendanceForm">
+
+<label for="nama">Nama lengkap</label>
+<input id="nama" required maxlength="80" placeholder="Masukkan nama">
+
+<label for="kelamin">Jenis Kelamin</label>
+<select id="kelamin" required>
+<option value="">Pilih jenis kelamin</option>
+<option value="Laki-laki">Laki-laki</option>
+<option value="Perempuan">Perempuan</option>
+</select>
+
+<label for="jenis">Jenis absensi</label>
+<select id="jenis">
+<option>Masuk</option>
+<option>Pulang</option>
+<option>Mulai istirahat</option>
+<option>Selesai istirahat</option>
+</select>
+
+<label for="foto">Foto absensi</label>
+<input id="foto" type="file" accept="image/*" capture="user" required>
+
+<img id="preview" class="hidden" alt="Pratinjau foto">
+
+<button class="primary" type="submit">Simpan Absensi</button>
+<p id="status" class="small"></p>
+
+</form>
+</section>
+
+<section id="adminPage" class="card hidden">
+<h2>👨‍💼 Dashboard Admin</h2>
+
+<p>Total absensi: <strong id="total">0</strong></p>
+
+<label for="filterTanggal">Filter tanggal</label>
+<input type="date" id="filterTanggal">
+
+<button class="secondary" onclick="exportCSV()">📥 Ekspor CSV</button>
+<button class="danger" onclick="hapusData()">Hapus Semua Data Demo</button>
+
+<div id="daftar"></div>
+
+<p class="small">
+Dashboard ini masih berupa demo lokal dan belum memiliki login admin.
+</p>
+</section>
+
+</div>
+
+<footer>Lanks Absen © 2026</footer>
+
+<script>
+const KEY="lanks_absen_demo";
+let fotoTerpilih="";
+
+function ambilData(){
+try{
+return JSON.parse(localStorage.getItem(KEY)||"[]");
+}catch{
+return [];
+}
+}
+
+function simpanData(data){
+localStorage.setItem(KEY,JSON.stringify(data));
+}
+
+function showPage(page){
+document.getElementById("userPage").classList.toggle("hidden",page!=="user");
+document.getElementById("adminPage").classList.toggle("hidden",page!=="admin");
+if(page==="admin")tampilkanData();
+}
+
+document.getElementById("foto").addEventListener("change",function(){
+const file=this.files[0];
+fotoTerpilih="";
+
+if(!file)return;
+
+if(!file.type.startsWith("image/")){
+alert("Pilih file gambar yang valid.");
+this.value="";
+return;
+}
+
+if(file.size>8*1024*1024){
+alert("Ukuran foto maksimal 8 MB.");
+this.value="";
+return;
+}
+
+const reader=new FileReader();
+
+reader.onload=function(event){
+fotoTerpilih=event.target.result;
+const preview=document.getElementById("preview");
+preview.src=fotoTerpilih;
+preview.classList.remove("hidden");
+};
+
+reader.readAsDataURL(file);
+});
+
+document.getElementById("attendanceForm").addEventListener("submit",function(event){
+event.preventDefault();
+
+if(!fotoTerpilih){
+alert("Ambil foto terlebih dahulu.");
+return;
+}
+
+const data=ambilData();
+
+const catatan={
+nama:document.getElementById("nama").value.trim(),
+kelamin:document.getElementById("kelamin").value,
+jenis:document.getElementById("jenis").value,
+waktu:new Date().toISOString(),
+foto:fotoTerpilih
+};
+
+data.unshift(catatan);
+
+try{
+simpanData(data);
+
+document.getElementById("status").textContent=
+"Absensi berhasil disimpan di browser ini.";
+
+this.reset();
+fotoTerpilih="";
+document.getElementById("preview").classList.add("hidden");
+
+}catch(error){
+alert("Penyimpanan browser penuh. Hapus data demo atau gunakan penyimpanan online.");
+}
+});
+
+function escapeHTML(text){
+return String(text||"").replace(/[&<>"']/g,function(c){
+return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+});
+}
+
+function tampilkanData(){
+const semua=ambilData();
+const filter=document.getElementById("filterTanggal").value;
+
+const data=semua.filter(function(item){
+if(!filter)return true;
+
+const tanggal=new Date(item.waktu);
+const y=tanggal.getFullYear();
+const m=String(tanggal.getMonth()+1).padStart(2,"0");
+const d=String(tanggal.getDate()).padStart(2,"0");
+
+return y+"-"+m+"-"+d===filter;
+});
+
+document.getElementById("total").textContent=semua.length;
+
+const daftar=document.getElementById("daftar");
+
+if(!data.length){
+daftar.innerHTML='<p class="small">Belum ada data absensi.</p>';
+return;
+}
+
+daftar.innerHTML=data.map(function(item){
+return `
+<article class="record">
+<strong>${escapeHTML(item.nama)}</strong>
+<p>Jenis Kelamin: ${escapeHTML(item.kelamin||"-")}</p>
+<p>Absensi: ${escapeHTML(item.jenis)}</p>
+<p class="small">${new Date(item.waktu).toLocaleString("id-ID")}</p>
+<img src="${item.foto}" alt="Foto absensi">
+</article>
+`;
+}).join("");
+}
+
+document.getElementById("filterTanggal").addEventListener("change",tampilkanData);
+
+function exportCSV(){
+const data=ambilData();
+
+const baris=[
+["Nama","Jenis Kelamin","Jenis Absensi","Waktu"],
+...data.map(function(item){
+return [
+item.nama,
+item.kelamin||"-",
+item.jenis,
+new Date(item.waktu).toLocaleString("id-ID")
+];
+})
+];
+
+const csv=baris.map(function(row){
+return row.map(function(value){
+return '"'+String(value||"").replace(/"/g,'""')+'"';
+}).join(",");
+}).join("\r\n");
+
+const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");
+
+a.href=url;
+a.download="lanks-absen.csv";
+a.click();
+
+URL.revokeObjectURL(url);
+}
+
+function hapusData(){
+if(confirm("Yakin ingin menghapus semua data demo?")){
+localStorage.removeItem(KEY);
+tampilkanData();
+}
+}
+
+tampilkanData();
+</script>
+
+</body>
+</html>
